@@ -74,10 +74,11 @@ class Clash extends AbstractProtocol
                 $config['proxy-groups'][$k]['proxies'] = [];
             }
         
+            $originalProxies = $config['proxy-groups'][$k]['proxies'];
             $groupProxies = [];
             $isFilter = false;
         
-            foreach ($config['proxy-groups'][$k]['proxies'] as $src) {
+            foreach ($originalProxies as $src) {
                 if ($this->isRegex($src)) {
                     $isFilter = true;
         
@@ -93,7 +94,7 @@ class Clash extends AbstractProtocol
                 $groupProxies[] = $src;
             }
         
-            if (!$isFilter) {
+            if (!$isFilter && empty($originalProxies)) {
                 $groupProxies = array_merge($groupProxies, $proxies);
             }
         
