@@ -139,25 +139,35 @@ class Stash extends AbstractProtocol
 
         $config['proxies'] = array_merge($config['proxies'] ? $config['proxies'] : [], $proxy);
         foreach ($config['proxy-groups'] as $k => $v) {
-            if (!is_array($config['proxy-groups'][$k]['proxies']))
+            if (!isset($config['proxy-groups'][$k]['proxies']) || !is_array($config['proxy-groups'][$k]['proxies'])) {
                 $config['proxy-groups'][$k]['proxies'] = [];
-            $isFilter = false;
-            foreach ($config['proxy-groups'][$k]['proxies'] as $src) {
-                foreach ($proxies as $dst) {
-                    if (!$this->isRegex($src))
-                        continue;
-                    $isFilter = true;
-                    $config['proxy-groups'][$k]['proxies'] = array_values(array_diff($config['proxy-groups'][$k]['proxies'], [$src]));
-                    if ($this->isMatch($src, $dst)) {
-                        array_push($config['proxy-groups'][$k]['proxies'], $dst);
-                    }
-                }
-                if ($isFilter)
-                    continue;
             }
-            if ($isFilter)
-                continue;
-            $config['proxy-groups'][$k]['proxies'] = array_merge($config['proxy-groups'][$k]['proxies'], $proxies);
+        
+            $originalProxies = $config['proxy-groups'][$k]['proxies'];
+            $groupProxies = [];
+            $isFilter = false;
+        
+            foreach ($originalProxies as $src) {
+                if ($this->isRegex($src)) {
+                    $isFilter = true;
+        
+                    foreach ($proxies as $dst) {
+                        if ($this->isMatch($src, $dst)) {
+                            $groupProxies[] = $dst;
+                        }
+                    }
+        
+                    continue;
+                }
+        
+                $groupProxies[] = $src;
+            }
+        
+            if (!$isFilter && empty($originalProxies)) {
+                $groupProxies = array_merge($groupProxies, $proxies);
+            }
+        
+            $config['proxy-groups'][$k]['proxies'] = array_values(array_unique($groupProxies));
         }
         $config['proxy-groups'] = array_filter($config['proxy-groups'], function ($group) {
             return $group['proxies'];
