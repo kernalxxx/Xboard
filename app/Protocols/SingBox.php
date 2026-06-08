@@ -182,37 +182,52 @@ class SingBox extends AbstractProtocol
             if (!in_array($outbound['type'], ['urltest', 'selector'])) {
                 continue;
             }
-
+        
+            if (!isset($outbound['outbounds']) || !is_array($outbound['outbounds'])) {
+                $outbound['outbounds'] = [];
+            }
+        
             $include = $outbound['include'] ?? null;
             $exclude = $outbound['exclude'] ?? null;
             $fallback = $outbound['fallback'] ?? null;
-            unset($outbound['include'], $outbound['exclude'], $outbound['fallback']);
-
+            $prepend = $outbound['prepend'] ?? false;
+        
+            unset($outbound['include'], $outbound['exclude'], $outbound['fallback'], $outbound['prepend']);
+        
+            $fixedTags = $outbound['outbounds'];
             $allTags = array_column($proxies, 'tag');
+        
             $tags = $allTags;
-
+        
             if ($include !== null && $include !== '') {
                 $tags = array_values(array_filter(
                     $tags,
                     fn($tag) => $this->matchesPattern($include, $tag)
                 ));
             }
-
+        
             if ($exclude !== null && $exclude !== '') {
                 $tags = array_values(array_filter(
                     $tags,
                     fn($tag) => !$this->matchesPattern($exclude, $tag)
                 ));
             }
-
+        
             if (empty($tags) && $fallback !== null) {
                 $tags = $this->resolveFallback($fallback, $allTags, $outbounds, $outbound['tag'] ?? '');
             }
-
-            if (!empty($tags)) {
-                array_push($outbound['outbounds'], ...$tags);
+        
+            if ($include === null && $exclude === null && !empty($fixedTags)) {
+                $tags = [];
+            }
+        
+            if ($prepend) {
+                $outbound['outbounds'] = array_values(array_unique(array_merge($tags, $fixedTags)));
+            } else {
+                $outbound['outbounds'] = array_values(array_unique(array_merge($fixedTags, $tags)));
             }
         }
+        
         unset($outbound);
 
         $outbounds = array_merge($outbounds, $proxies);
