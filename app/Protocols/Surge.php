@@ -86,7 +86,7 @@ class Surge extends AbstractProtocol
 
         $config = str_replace('$subs_link', $subsURL, $config);
         $config = str_replace('$subs_domain', $subsDomain, $config);
-        $config = str_replace('$proxies', $proxies, $config);
+        $config = str_replace('$proxies', rtrim($proxies, "\r\n"), $config);
         $config = str_replace('$proxy_group', rtrim($proxyGroup, ', '), $config);
 
         $upload = round($user['u'] / (1024 * 1024 * 1024), 2);
