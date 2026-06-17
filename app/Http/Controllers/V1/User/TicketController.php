@@ -8,12 +8,9 @@ use App\Http\Requests\User\TicketWithdraw;
 use App\Http\Resources\TicketResource;
 use App\Models\Ticket;
 use App\Models\TicketMessage;
-use App\Models\User;
 use App\Services\TicketService;
-use App\Utils\Dict;
 use Illuminate\Http\Request;
 use App\Services\Plugin\HookManager;
-use Illuminate\Support\Facades\Log;
 
 class TicketController extends Controller
 {
@@ -115,39 +112,12 @@ class TicketController extends Controller
 
     public function withdraw(TicketWithdraw $request)
     {
-        if ((int) admin_setting('withdraw_close_enable', 0)) {
-            return $this->fail([400, 'Unsupported withdraw']);
-        }
-        if (
-            !in_array(
-                $request->input('withdraw_method'),
-                admin_setting('commission_withdraw_method', Dict::WITHDRAW_METHOD_WHITELIST_DEFAULT)
-            )
-        ) {
-            return $this->fail([422, __('Unsupported withdrawal method')]);
-        }
-        $user = User::find($request->user()->id);
-        $limit = admin_setting('commission_withdraw_limit', 100);
-        if ($limit > ($user->commission_balance / 100)) {
-            return $this->fail([422, __('The current required minimum withdrawal commission is :limit', ['limit' => $limit])]);
-        }
-        try {
-            $ticketService = new TicketService();
-            $subject = __('[Commission Withdrawal Request] This ticket is opened by the system');
-            $message = sprintf(
-                "%s\r\n%s",
-                __('Withdrawal method') . "：" . $request->input('withdraw_method'),
-                __('Withdrawal account') . "：" . $request->input('withdraw_account')
-            );
-            $ticket = $ticketService->createTicket(
-                $request->user()->id,
-                $subject,
-                2,
-                $message
-            );
-        } catch (\Exception $e) {
-            throw $e;
-        }
+        $ticketService = new TicketService();
+        $ticket = $ticketService->createWithdrawTicket(
+            $request->user()->id,
+            $request->input('withdraw_method'),
+            $request->input('withdraw_account')
+        );
         HookManager::call('ticket.create.after', $ticket);
         return $this->success(true);
     }

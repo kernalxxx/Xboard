@@ -7,6 +7,7 @@ use App\Jobs\SendEmailJob;
 use App\Models\Ticket;
 use App\Models\TicketMessage;
 use App\Models\User;
+use App\Utils\Dict;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Services\Plugin\HookManager;
@@ -85,6 +86,48 @@ class TicketService
             DB::rollBack();
             throw $e;
         }
+    }
+
+    public function createWithdrawTicket($userId, string $withdrawMethod, string $withdrawAccount)
+    {
+        if ((int) admin_setting('withdraw_close_enable', 0)) {
+            throw new ApiException('Unsupported withdraw');
+        }
+
+        if (
+            !in_array(
+                $withdrawMethod,
+                admin_setting('commission_withdraw_method', Dict::WITHDRAW_METHOD_WHITELIST_DEFAULT)
+            )
+        ) {
+            throw new ApiException(__('Unsupported withdrawal method'), 422);
+        }
+
+        $user = User::find($userId);
+        if (!$user) {
+            throw new ApiException(__('The user does not exist'));
+        }
+
+        $limit = admin_setting('commission_withdraw_limit', 100);
+        if ($limit > ($user->commission_balance / 100)) {
+            throw new ApiException(__('The current required minimum withdrawal commission is :limit', ['limit' => $limit]), 422);
+        }
+
+        return $this->createTicket(
+            $user->id,
+            '申请提现 [本工单由系统自动创建]',
+            2,
+            implode("\r\n", [
+                '提现金额：' . $this->formatCommissionAmount($user->commission_balance),
+                '提现方式：' . $withdrawMethod,
+                '收款账号：' . $withdrawAccount
+            ])
+        );
+    }
+
+    private function formatCommissionAmount($amount): string
+    {
+        return admin_setting('currency_symbol', '¥') . number_format($amount / 100, 2, '.', '');
     }
 
     // 半小时内不再重复通知
