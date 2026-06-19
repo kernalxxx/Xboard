@@ -138,6 +138,7 @@ class UserController extends Controller
                 'u',
                 'd',
                 'transfer_enable',
+                'online_count',
                 'email',
                 'uuid',
                 'device_limit',
