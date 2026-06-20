@@ -18,12 +18,11 @@ use Illuminate\Support\Facades\File;
 |
 */
 
-
-Route::get('/', function (Request $request) {
+$renderFrontendTheme = function (Request $request) {
     if (admin_setting('app_url') && admin_setting('safe_mode_enable', 0)) {
         $requestHost = $request->getHost();
         $configHost = parse_url(admin_setting('app_url'), PHP_URL_HOST);
-        
+
         if ($requestHost !== $configHost) {
             abort(403);
         }
@@ -71,10 +70,23 @@ Route::get('/', function (Request $request) {
         ]);
         abort(500, '主题加载失败');
     }
-});
+};
+
+$normalizeRoutePrefix = fn($value, string $fallback) => trim((string) $value, '/') !== ''
+    ? trim((string) $value, '/')
+    : $fallback;
+
+$defaultAdminPath = hash('crc32b', config('app.key'));
+$adminPath = $normalizeRoutePrefix(
+    admin_setting('secure_path', admin_setting('frontend_admin_path', $defaultAdminPath)),
+    $defaultAdminPath
+);
+$subscribePath = $normalizeRoutePrefix(admin_setting('subscribe_path', 's'), 's');
+
+Route::get('/', $renderFrontendTheme);
 
 //TODO:: 兼容
-Route::get('/' . admin_setting('secure_path', admin_setting('frontend_admin_path', hash('crc32b', config('app.key')))), function () {
+Route::get('/' . $adminPath, function () use ($adminPath) {
     return view('admin', [
         'title' => admin_setting('app_name', 'XBoard'),
         'theme_sidebar' => admin_setting('frontend_theme_sidebar', 'light'),
@@ -83,10 +95,28 @@ Route::get('/' . admin_setting('secure_path', admin_setting('frontend_admin_path
         'background_url' => admin_setting('frontend_background_url'),
         'version' => app(UpdateService::class)->getCurrentVersion(),
         'logo' => admin_setting('logo'),
-        'secure_path' => admin_setting('secure_path', admin_setting('frontend_admin_path', hash('crc32b', config('app.key'))))
+        'secure_path' => $adminPath
     ]);
 });
 
-Route::get('/' . (admin_setting('subscribe_path', 's')) . '/{token}', [\App\Http\Controllers\V1\Client\ClientController::class, 'subscribe'])
+Route::get('/' . $subscribePath . '/{token}', [\App\Http\Controllers\V1\Client\ClientController::class, 'subscribe'])
     ->middleware('client')
     ->name('client.subscribe');
+
+$frontendReservedPrefixes = array_values(array_filter([
+    'api',
+    'theme',
+    'assets',
+    'storage',
+    $adminPath,
+    $subscribePath,
+], fn($prefix) => trim((string) $prefix, '/') !== ''));
+
+$frontendReservedPattern = implode('|', array_map(
+    fn($prefix) => preg_quote(trim((string) $prefix, '/'), '#'),
+    $frontendReservedPrefixes
+));
+
+Route::get('/{path}', $renderFrontendTheme)
+    ->where('path', '(?!(?:' . $frontendReservedPattern . ')(?:/|$))(?!.*\.[^/]+$).+')
+    ->name('frontend.spa');
