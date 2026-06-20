@@ -141,8 +141,11 @@ class LoginService
 
         Cache::put($key, $user->id, 60);
 
-        $redirect = $redirect ?: 'dashboard';
-        $loginRedirect = '/#/login?verify=' . $code . '&redirect=' . rawurlencode($redirect);
+        $redirect = $redirect ?: 'overview';
+        $loginRedirect = '/login?' . http_build_query([
+            'verify' => $code,
+            'redirect' => $redirect
+        ]);
 
         if (admin_setting('app_url')) {
             $url = admin_setting('app_url') . $loginRedirect;

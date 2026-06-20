@@ -175,9 +175,9 @@
                                 <td class="aligncenter content-block"
                                     style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 12px; vertical-align: top; color: #999; text-align: center; margin: 0; padding: 0 0 20px;"
                                     align="center" valign="top">
-                                    <a href="{{$url}}/#/subscribe"
+                                    <a href="{{$url}}/account"
                                         style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 12px; color: #999; text-decoration: none; margin: 0;">我的订阅</a> |
-                                    <a href="{{$url}}/#/knowledge"
+                                    <a href="{{$url}}/docs"
                                         style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 12px; color: #999; text-decoration: none; margin: 0;">使用教程</a>
                                 </td>
                             </tr>

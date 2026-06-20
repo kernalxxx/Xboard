@@ -91,7 +91,10 @@ class AuthController extends Controller
     {
         // 处理直接通过token重定向
         if ($token = $request->input('token')) {
-            $redirect = '/#/login?verify=' . $token . '&redirect=' . ($request->input('redirect', 'dashboard'));
+            $redirect = '/login?' . http_build_query([
+                'verify' => $token,
+                'redirect' => $request->input('redirect') ?: 'overview'
+            ]);
 
             return redirect()->to(
                 admin_setting('app_url')
