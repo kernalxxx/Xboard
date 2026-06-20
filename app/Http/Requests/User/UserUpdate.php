@@ -15,15 +15,17 @@ class UserUpdate extends FormRequest
     {
         return [
             'remind_expire' => 'in:0,1',
-            'remind_traffic' => 'in:0,1'
+            'remind_traffic' => 'in:0,1',
+            'remind_ticket' => 'in:0,1'
         ];
     }
 
     public function messages()
     {
         return [
-            'show.in' => __('Incorrect format of expiration reminder'),
-            'renew.in' => __('Incorrect traffic alert format')
+            'remind_expire.in' => __('Incorrect format of expiration reminder'),
+            'remind_traffic.in' => __('Incorrect traffic alert format'),
+            'remind_ticket.in' => __('Incorrect format of ticket reminder')
         ];
     }
 }

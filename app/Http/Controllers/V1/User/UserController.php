@@ -96,6 +96,7 @@ class UserController extends Controller
                 'banned',
                 'remind_expire',
                 'remind_traffic',
+                'remind_ticket',
                 'expired_at',
                 'balance',
                 'commission_balance',
@@ -177,7 +178,8 @@ class UserController extends Controller
     {
         $updateData = $request->only([
             'remind_expire',
-            'remind_traffic'
+            'remind_traffic',
+            'remind_ticket'
         ]);
 
         $user = $request->user();

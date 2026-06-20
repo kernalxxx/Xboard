@@ -173,6 +173,7 @@ class UserService
         // 默认设置
         $user->remind_expire = admin_setting('default_remind_expire', 1);
         $user->remind_traffic = admin_setting('default_remind_traffic', 1);
+        $user->remind_ticket = 1;
         $user->expired_at = null;
 
         // 可选字段

@@ -30,6 +30,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $banned 是否封禁
  * @property int|null $remind_expire 到期提醒
  * @property int|null $remind_traffic 流量提醒
+ * @property bool|null $remind_ticket 工单提醒
  * @property int|null $expired_at 过期时间
  * @property int|null $balance 余额
  * @property int|null $commission_balance 佣金余额
@@ -73,6 +74,7 @@ class User extends Authenticatable
         'is_staff' => 'boolean',
         'remind_expire' => 'boolean',
         'remind_traffic' => 'boolean',
+        'remind_ticket' => 'boolean',
         'commission_auto_check' => 'boolean',
         'commission_rate' => 'float',
         'next_reset_at' => 'timestamp',
