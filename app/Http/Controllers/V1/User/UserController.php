@@ -150,18 +150,23 @@ class UserController extends Controller
         if (!$user) {
             return $this->fail([400, __('The user does not exist')]);
         }
+        $planPayload = null;
         if ($user->plan_id) {
             $plan = $user->plan;
             if (!$plan) {
                 return $this->fail([400, __('Subscription plan does not exist')]);
             }
-            $user['plan'] = PlanResource::make($plan)->resolve();
+            $planPayload = PlanResource::make($plan)->resolve($request);
         }
         $user['subscribe_url'] = Helper::getSubscribeUrl($user['token']);
         $userService = new UserService();
         $user['reset_day'] = $userService->getResetDay($user);
-        $user = HookManager::filter('user.subscribe.response', $user);
-        return $this->success($user);
+        $response = $user->toArray();
+        if ($planPayload !== null) {
+            $response['plan'] = $planPayload;
+        }
+        $response = HookManager::filter('user.subscribe.response', $response);
+        return $this->success($response);
     }
 
     public function resetSecurity(Request $request)
