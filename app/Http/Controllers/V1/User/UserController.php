@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\V1\User;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\PlanResource;
 use App\Http\Requests\User\UserChangePassword;
 use App\Http\Requests\User\UserTransfer;
 use App\Http\Requests\User\UserUpdate;
 use App\Models\Order;
-use App\Models\Plan;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Auth\LoginService;
@@ -151,10 +151,11 @@ class UserController extends Controller
             return $this->fail([400, __('The user does not exist')]);
         }
         if ($user->plan_id) {
-            $user['plan'] = Plan::find($user->plan_id);
-            if (!$user['plan']) {
+            $plan = $user->plan;
+            if (!$plan) {
                 return $this->fail([400, __('Subscription plan does not exist')]);
             }
+            $user['plan'] = PlanResource::make($plan)->resolve();
         }
         $user['subscribe_url'] = Helper::getSubscribeUrl($user['token']);
         $userService = new UserService();
