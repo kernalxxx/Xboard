@@ -148,7 +148,7 @@ class TicketService
                 'template_value' => [
                     'name' => admin_setting('app_name', 'XBoard'),
                     'url' => admin_setting('app_url'),
-                    'content' => "主题：{$ticket->subject}\r\n回复内容：{$ticketMessage->message}"
+                    'content' => '您的工单有新的回复，请登录用户中心查看。'
                 ]
             ]);
         }
