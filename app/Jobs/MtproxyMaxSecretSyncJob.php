@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 
 class MtproxyMaxSecretSyncJob implements ShouldQueue
@@ -32,7 +33,26 @@ class MtproxyMaxSecretSyncJob implements ShouldQueue
 
         foreach ($remoteCommands as $remoteCommand) {
             $command = array_merge($sshCommand, $remoteCommand);
-            Process::run($command);
+            $result = Process::run($command);
+
+            if ($result->successful()) {
+                Log::info('mtproxymax command succeeded', [
+                    'remote_command' => $remoteCommand,
+                    'label' => $this->label,
+                    'ips' => $this->ips,
+                    'expires' => $this->expires,
+                ]);
+                continue;
+            }
+
+            Log::error('mtproxymax command failed', [
+                'remote_command' => $remoteCommand,
+                'label' => $this->label,
+                'ips' => $this->ips,
+                'expires' => $this->expires,
+                'exit_code' => $result->exitCode(),
+                'error_output' => $result->errorOutput(),
+            ]);
         }
     }
 
