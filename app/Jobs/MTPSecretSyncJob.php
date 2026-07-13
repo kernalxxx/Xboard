@@ -98,7 +98,6 @@ class MTPSecretSyncJob implements ShouldQueue
         return [
             ['mtproxymax', 'secret', 'add', $this->label],
             $setLimitsCommand,
-            ['mtproxymax', 'secret', 'sort', 'name'],
         ];
     }
 
