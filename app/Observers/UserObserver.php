@@ -6,7 +6,6 @@ use App\Jobs\NodeUserSyncJob;
 use App\Models\User;
 use App\Services\Plugin\HookManager;
 use App\Services\TrafficResetService;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 
 class UserObserver
@@ -97,26 +96,7 @@ class UserObserver
 
     foreach ($remoteCommands as $remoteCommand) {
       $command = array_merge($sshCommand, $remoteCommand);
-      $result = Process::run($command);
-
-      if ($result->successful()) {
-        Log::info('mtproxymax command succeeded', [
-          'remote_command' => $remoteCommand,
-          'label' => $label,
-          'ips' => $ips,
-          'expires' => $expires,
-        ]);
-        continue;
-      }
-
-      Log::error('mtproxymax command failed', [
-        'remote_command' => $remoteCommand,
-        'label' => $label,
-        'ips' => $ips,
-        'expires' => $expires,
-        'exit_code' => $result->exitCode(),
-        'error_output' => $result->errorOutput(),
-      ]);
+      Process::run($command);
     }
   }
 
