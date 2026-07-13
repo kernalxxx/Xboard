@@ -15,6 +15,7 @@ class MTPSecretSyncJob implements ShouldQueue
 
     public const ACTION_SYNC_LIMITS = 'sync_limits';
     public const ACTION_ROTATE = 'rotate';
+    private const NO_EXPIRES = '0';
 
     public function __construct(
         private readonly string $label,
@@ -23,11 +24,6 @@ class MTPSecretSyncJob implements ShouldQueue
         private readonly string $action = self::ACTION_SYNC_LIMITS,
     ) {
         $this->onQueue('mtp_sync');
-    }
-
-    public static function dispatchLimits(string $label, int $ips, ?string $expires = null): void
-    {
-        self::dispatch($label, $ips, $expires, self::ACTION_SYNC_LIMITS);
     }
 
     public static function dispatchLimitsForUserId(int $userId, int $ips, ?string $expires = null): void
@@ -55,9 +51,14 @@ class MTPSecretSyncJob implements ShouldQueue
         return date('Y-m-d', $timestamp + (3 * 86400));
     }
 
+    private static function dispatchLimits(string $label, int $ips, ?string $expires = null): void
+    {
+        self::dispatch($label, $ips, $expires, self::ACTION_SYNC_LIMITS);
+    }
+
     public function handle(): void
     {
-        $sshCommand = $this->mtproxyMaxSshCommand();
+        $sshCommand = $this->mtpSshCommand();
         $remoteCommands = $this->remoteCommands();
         $command = array_merge($sshCommand, [$this->remoteScript($remoteCommands)]);
         Process::run($command);
@@ -71,13 +72,10 @@ class MTPSecretSyncJob implements ShouldQueue
             ];
         }
 
-        $setLimitsCommand = ['mtproxymax', 'secret', 'setlimits', $this->label, '0', (string) $this->ips, '0'];
-        if ($this->expires !== null) {
-            $setLimitsCommand[] = $this->expires;
-        }
+        $expires = $this->expires ?? self::NO_EXPIRES;
+        $setLimitsCommand = ['mtproxymax', 'secret', 'setlimits', $this->label, '0', (string) $this->ips, '0', $expires];
 
         return [
-            ['mtproxymax', 'secret', 'remove', $this->label],
             ['mtproxymax', 'secret', 'add', $this->label],
             $setLimitsCommand,
             ['mtproxymax', 'secret', 'sort', 'name'],
@@ -100,7 +98,7 @@ class MTPSecretSyncJob implements ShouldQueue
         ));
     }
 
-    private function mtproxyMaxSshCommand(): array
+    private function mtpSshCommand(): array
     {
         $host = (string) config('mtp.ssh.host');
         $port = (string) config('mtp.ssh.port');

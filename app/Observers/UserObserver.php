@@ -76,7 +76,7 @@ class UserObserver
     $ips = (int) ($user->device_limit ?? 0);
 
     if ($user->expired_at === null) {
-      MTPSecretSyncJob::dispatchLimits($label, $ips);
+      MTPSecretSyncJob::dispatchLimitsForUserId($user->id, $ips);
       return;
     }
 
@@ -88,6 +88,6 @@ class UserObserver
       'expires' => $expires,
     ]);
 
-    MTPSecretSyncJob::dispatchLimits($label, $ips, $expires);
+    MTPSecretSyncJob::dispatchLimitsForUserId($user->id, $ips, $expires);
   }
 }
