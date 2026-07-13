@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 
 class MTPSecretSyncJob implements ShouldQueue
@@ -61,7 +62,26 @@ class MTPSecretSyncJob implements ShouldQueue
         $sshCommand = $this->mtpSshCommand();
         $remoteCommands = $this->remoteCommands();
         $command = array_merge($sshCommand, [$this->remoteScript($remoteCommands)]);
-        Process::run($command);
+        $result = Process::run($command);
+
+        if ($result->successful()) {
+            Log::info('mtp command succeeded', [
+                'remote_commands' => $remoteCommands,
+                'label' => $this->label,
+                'ips' => $this->ips,
+                'expires' => $this->expires,
+            ]);
+            return;
+        }
+
+        Log::error('mtp command failed', [
+            'remote_commands' => $remoteCommands,
+            'label' => $this->label,
+            'ips' => $this->ips,
+            'expires' => $this->expires,
+            'exit_code' => $result->exitCode(),
+            'error_output' => $result->errorOutput(),
+        ]);
     }
 
     private function remoteCommands(): array
