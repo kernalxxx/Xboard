@@ -2,11 +2,11 @@
 
 namespace App\Observers;
 
+use App\Jobs\MtproxyMaxSecretSyncJob;
 use App\Jobs\NodeUserSyncJob;
 use App\Models\User;
 use App\Services\Plugin\HookManager;
 use App\Services\TrafficResetService;
-use Illuminate\Support\Facades\Process;
 
 class UserObserver
 {
@@ -82,58 +82,6 @@ class UserObserver
       'expires' => $expires,
     ]);
 
-    $this->syncMtproxyMaxSecret($label, $ips, $expires);
-  }
-
-  private function syncMtproxyMaxSecret(string $label, int $ips, string $expires): void
-  {
-    $sshCommand = $this->mtproxyMaxSshCommand();
-
-    $remoteCommands = [
-      ['mtproxymax', 'secret', 'add', $label],
-      ['mtproxymax', 'secret', 'setlimits', $label, '0', (string) $ips, '0', $expires],
-    ];
-
-    foreach ($remoteCommands as $remoteCommand) {
-      $command = array_merge($sshCommand, $remoteCommand);
-      Process::run($command);
-    }
-  }
-
-  private function mtproxyMaxSshCommand(): array
-  {
-    $host = (string) config('mtproxymax.ssh.host');
-    $port = (string) config('mtproxymax.ssh.port');
-    $user = (string) config('mtproxymax.ssh.user');
-    $keyPath = $this->expandHomePath((string) config('mtproxymax.ssh.key_path'));
-
-    return [
-      'ssh',
-      '-i',
-      $keyPath,
-      '-p',
-      (string) $port,
-      '-o',
-      'BatchMode=yes',
-      '-o',
-      'StrictHostKeyChecking=accept-new',
-      '-o',
-      'ConnectTimeout=10',
-      "{$user}@{$host}",
-    ];
-  }
-
-  private function expandHomePath(string $path): string
-  {
-    if (!str_starts_with($path, '~/')) {
-      return $path;
-    }
-
-    $home = rtrim((string) ($_SERVER['HOME'] ?? getenv('HOME') ?: ''), '/');
-    if ($home === '') {
-      return $path;
-    }
-
-    return $home . substr($path, 1);
+    MtproxyMaxSecretSyncJob::dispatch($label, $ips, $expires);
   }
 }
