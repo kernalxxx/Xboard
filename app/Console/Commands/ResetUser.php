@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\MTPSecretSyncJob;
 use App\Models\Plan;
 use App\Utils\Helper;
 use Illuminate\Console\Command;
@@ -52,6 +53,7 @@ class ResetUser extends Command
             $user->token = Helper::guid();
             $user->uuid = Helper::guid(true);
             $user->save();
+            MTPSecretSyncJob::dispatchRotateForUserId($user->id);
             $this->info("已重置用户{$user->email}的安全信息");
         }
     }

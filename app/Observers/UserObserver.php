@@ -2,7 +2,7 @@
 
 namespace App\Observers;
 
-use App\Jobs\MtproxyMaxSecretSyncJob;
+use App\Jobs\MTPSecretSyncJob;
 use App\Jobs\NodeUserSyncJob;
 use App\Models\User;
 use App\Services\Plugin\HookManager;
@@ -25,8 +25,8 @@ class UserObserver
     $needsSync = $user->wasChanged($syncFields);
     $oldGroupId = $user->wasChanged('group_id') ? $user->getOriginal('group_id') : null;
 
-    if ($user->wasChanged('expired_at')) {
-      $this->callExpiredAtChangedHook($user);
+    if ($user->wasChanged(['plan_id', 'expired_at', 'device_limit'])) {
+      $this->syncMtproxyLimits($user);
     }
 
     if ($user->wasChanged(['plan_id', 'expired_at'])) {
@@ -40,7 +40,7 @@ class UserObserver
 
   public function created(User $user): void
   {
-    $this->callExpiredAtChangedHook($user);
+    $this->syncMtproxyLimits($user);
 
     $this->recalculateNextResetAt($user);
     NodeUserSyncJob::dispatch($user->id, 'created');
@@ -66,15 +66,21 @@ class UserObserver
     });
   }
 
-  private function callExpiredAtChangedHook(User $user): void
+  private function syncMtproxyLimits(User $user): void
   {
-    if ($user->expired_at === null) {
+    if ($user->plan_id === null) {
       return;
     }
 
-    $label = sprintf('UID_%05d', $user->id);
+    $label = MTPSecretSyncJob::labelForUserId($user->id);
     $ips = (int) ($user->device_limit ?? 0);
-    $expires = date('Y-m-d', $user->expired_at + (3 * 86400));
+
+    if ($user->expired_at === null) {
+      MTPSecretSyncJob::dispatchLimits($label, $ips);
+      return;
+    }
+
+    $expires = MTPSecretSyncJob::expiresFromTimestamp($user->expired_at);
 
     HookManager::call('user.subscription.expiry.changed', [
       'label' => $label,
@@ -82,6 +88,6 @@ class UserObserver
       'expires' => $expires,
     ]);
 
-    MtproxyMaxSecretSyncJob::dispatch($label, $ips, $expires);
+    MTPSecretSyncJob::dispatchLimits($label, $ips, $expires);
   }
 }

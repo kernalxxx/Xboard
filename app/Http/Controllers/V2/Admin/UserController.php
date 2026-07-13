@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UserGenerate;
 use App\Http\Requests\Admin\UserSendMail;
 use App\Http\Requests\Admin\UserUpdate;
+use App\Jobs\MTPSecretSyncJob;
 use App\Jobs\SendEmailJob;
 use App\Models\Plan;
 use App\Models\User;
@@ -41,6 +42,7 @@ class UserController extends Controller
                 'user' => $user,
                 'request' => $request,
             ]);
+            MTPSecretSyncJob::dispatchRotateForUserId($user->id);
         }
 
         return $this->success($result);

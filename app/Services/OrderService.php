@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\ApiException;
+use App\Jobs\MTPSecretSyncJob;
 use App\Jobs\OrderHandleJob;
 use App\Models\Order;
 use App\Models\Plan;
@@ -130,6 +131,13 @@ class OrderService
                 throw new \RuntimeException('订单信息保存失败');
             }
         });
+
+        if ((string) $order->period === Plan::PERIOD_ONETIME && !$this->user->wasChanged(['plan_id', 'expired_at', 'device_limit'])) {
+            MTPSecretSyncJob::dispatchLimitsForUserId(
+                $this->user->id,
+                (int) ($this->user->device_limit ?? 0)
+            );
+        }
 
         $eventId = match ((int) $order->type) {
             Order::STATUS_PROCESSING => admin_setting('new_order_event_id', 0),

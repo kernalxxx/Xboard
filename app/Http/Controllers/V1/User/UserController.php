@@ -7,6 +7,7 @@ use App\Http\Resources\PlanResource;
 use App\Http\Requests\User\UserChangePassword;
 use App\Http\Requests\User\UserTransfer;
 use App\Http\Requests\User\UserUpdate;
+use App\Jobs\MTPSecretSyncJob;
 use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\User;
@@ -177,6 +178,7 @@ class UserController extends Controller
         if (!$user->save()) {
             return $this->fail([400, __('Reset failed')]);
         }
+        MTPSecretSyncJob::dispatchRotateForUserId($user->id);
         return $this->success(Helper::getSubscribeUrl($user->token));
     }
 

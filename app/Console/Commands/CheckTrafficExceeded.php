@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Server;
 use App\Models\User;
+use App\Jobs\MTPSecretSyncJob;
 use App\Services\NodeSyncService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Redis;
@@ -27,7 +28,7 @@ class CheckTrafficExceeded extends Command
             ->whereRaw('u + d >= transfer_enable')
             ->where('transfer_enable', '>', 0)
             ->where('banned', 0)
-            ->select(['id', 'group_id'])
+            ->select(['id', 'group_id', 'device_limit'])
             ->get();
 
         if ($exceededUsers->isEmpty()) {
@@ -54,7 +55,17 @@ class CheckTrafficExceeded extends Command
                     'action' => 'remove',
                     'users' => array_map(fn($id) => ['id' => $id], $userIdsInGroup),
                 ]);
+
                 $notifiedCount++;
+            }
+
+            $expires = MTPSecretSyncJob::expiresFromTimestamp(time());
+            foreach ($users as $user) {
+                MTPSecretSyncJob::dispatchLimitsForUserId(
+                    $user->id,
+                    (int) ($user->device_limit ?? 0),
+                    $expires
+                );
             }
         }
 

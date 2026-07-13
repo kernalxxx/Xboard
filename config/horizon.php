@@ -186,7 +186,7 @@ return [
             ],
             'business' => [
                 'connection' => 'redis',
-                'queue' => ['default', 'order_handle', 'mtproxy_sync'],
+                'queue' => ['default', 'order_handle', 'mtp_sync'],
                 'balance' => 'simple',
                 'minProcesses' => 1,
                 'maxProcesses' => (int) env('HORIZON_BUSINESS_MAX', 3),
@@ -217,7 +217,7 @@ return [
                 'queue' => [
                     'default',
                     'order_handle',
-                    'mtproxy_sync',
+                    'mtp_sync',
                     'traffic_fetch',
                     'stat',
                     'send_email',
