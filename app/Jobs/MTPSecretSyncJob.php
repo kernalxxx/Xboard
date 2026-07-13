@@ -104,7 +104,7 @@ class MTPSecretSyncJob implements ShouldQueue
 
     private function remoteScript(array $remoteCommands): string
     {
-        return implode(' && ', array_map(
+        return implode(' ; ', array_map(
             fn(array $command) => $this->remoteCommandToString($command),
             $remoteCommands
         ));
