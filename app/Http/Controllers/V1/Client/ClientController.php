@@ -53,7 +53,7 @@ class ClientController extends Controller
 
         $clientInfo = $this->getClientInfo($request);
         if (($clientInfo['name'] ?? null) === 'telegram') {
-            return $this->telegramSubscribeLink($user);
+            return $this->mtpLink($user);
         }
 
         return $this->doSubscribe($request, $user, null, $clientInfo);
@@ -212,7 +212,7 @@ class ClientController extends Controller
         ];
     }
 
-    private function telegramSubscribeLink($user)
+    private function mtpLink($user)
     {
         $label = MTPSecretSyncJob::labelForUserId($user->id);
         $secret = $this->resolveMTPSecret($label);
@@ -222,7 +222,7 @@ class ClientController extends Controller
 
     private function resolveMTPSecret(string $label): string
     {
-        $command = $this->buildMtpSshCommand(sprintf('mtproxymax secret link %s', $label));
+        $command = $this->buildMTPCommand(sprintf('mtproxymax secret link %s', $label));
         $result = Process::run($command);
 
         if (!$result->successful()) {
@@ -253,7 +253,7 @@ class ClientController extends Controller
         ]);
     }
 
-    private function buildMtpSshCommand(string $remoteCommand): array
+    private function buildMTPCommand(string $remoteCommand): array
     {
         $host = (string) config('mtp.ssh.host');
         $port = (string) config('mtp.ssh.port');

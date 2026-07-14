@@ -59,7 +59,7 @@ class MTPSecretSyncJob implements ShouldQueue
 
     public function handle(): void
     {
-        $sshCommand = $this->mtpSshCommand();
+        $sshCommand = $this->mtpCommand();
         $remoteCommands = $this->remoteCommands();
         $command = array_merge($sshCommand, [$this->remoteScript($remoteCommands)]);
         $result = Process::run($command);
@@ -117,7 +117,7 @@ class MTPSecretSyncJob implements ShouldQueue
         ));
     }
 
-    private function mtpSshCommand(): array
+    private function mtpCommand(): array
     {
         $host = (string) config('mtp.ssh.host');
         $port = (string) config('mtp.ssh.port');
