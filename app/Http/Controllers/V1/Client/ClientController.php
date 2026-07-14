@@ -53,7 +53,7 @@ class ClientController extends Controller
 
         $clientInfo = $this->getClientInfo($request);
         if (($clientInfo['name'] ?? null) === 'telegram') {
-            return $this->redirectTelegramSubscribe($user);
+            return $this->telegramSubscribeLink($user);
         }
 
         return $this->doSubscribe($request, $user, null, $clientInfo);
@@ -217,12 +217,12 @@ class ClientController extends Controller
         ];
     }
 
-    private function redirectTelegramSubscribe($user)
+    private function telegramSubscribeLink($user)
     {
         $label = MTPSecretSyncJob::labelForUserId($user->id);
         $secret = $this->resolveTelegramProxySecret($label);
 
-        return redirect()->away($this->buildTelegramProxyRedirectUrl($secret), 301);
+        return response($this->buildTelegramProxyRedirectUrl($secret), 200, ['Content-Type' => 'text/plain']);
     }
 
     private function resolveTelegramProxySecret(string $label): string
