@@ -215,12 +215,12 @@ class ClientController extends Controller
     private function telegramSubscribeLink($user)
     {
         $label = MTPSecretSyncJob::labelForUserId($user->id);
-        $secret = $this->resolveTelegramProxySecret($label);
+        $secret = $this->resolveMTPSecret($label);
 
-        return response($this->buildTelegramProxyRedirectUrl($secret), 200, ['Content-Type' => 'text/plain']);
+        return redirect()->away($this->buildMTPRedirectUrl($secret), 301);
     }
 
-    private function resolveTelegramProxySecret(string $label): string
+    private function resolveMTPSecret(string $label): string
     {
         $command = $this->buildMtpSshCommand(sprintf('mtproxymax secret link %s', $label));
         $result = Process::run($command);
@@ -237,7 +237,7 @@ class ClientController extends Controller
         return $matches[1];
     }
 
-    private function buildTelegramProxyRedirectUrl(string $secret): string
+    private function buildMTPRedirectUrl(string $secret): string
     {
         $serverHost = (string) config('mtp.server.host');
         $serverPort = (string) config('mtp.server.port');
