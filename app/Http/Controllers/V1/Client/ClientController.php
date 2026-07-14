@@ -156,7 +156,7 @@ class ClientController extends Controller
         $requestFlag = strtolower(trim((string) $request->input('flag', '')));
         $userAgent = strtolower((string) $request->header('User-Agent', ''));
 
-        if ($this->isTelegramSubscribeRequest($requestFlag, $userAgent)) {
+        if ($requestFlag === 'telegram') {
             return $this->telegramClientInfo();
         }
 
@@ -201,11 +201,6 @@ class ClientController extends Controller
             'name' => $clientName,
             'version' => $clientVersion
         ];
-    }
-
-    private function isTelegramSubscribeRequest(string $requestFlag, string $userAgent): bool
-    {
-        return $requestFlag === 'telegram' || str_contains($userAgent, 'telegram');
     }
 
     private function telegramClientInfo(): array
