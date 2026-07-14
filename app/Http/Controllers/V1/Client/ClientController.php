@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers\V1\Client;
 
+use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Models\Server;
 use App\Protocols\General;
+use App\Jobs\MTPSecretSyncJob;
 use App\Services\Plugin\HookManager;
 use App\Services\ServerService;
 use App\Services\UserService;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Process;
 
 class ClientController extends Controller
 {
@@ -48,17 +51,20 @@ class ClientController extends Controller
             return response('', 403, ['Content-Type' => 'text/plain']);
         }
 
-        return $this->doSubscribe($request, $user);
+        $clientInfo = $this->getClientInfo($request);
+        if (($clientInfo['name'] ?? null) === 'telegram') {
+            return $this->redirectTelegramSubscribe($user);
+        }
+
+        return $this->doSubscribe($request, $user, null, $clientInfo);
     }
 
-    public function doSubscribe(Request $request, $user, $servers = null)
+    public function doSubscribe(Request $request, $user, $servers = null, array $clientInfo = [])
     {
         if ($servers === null) {
             $servers = ServerService::getAvailableServers($user);
             $servers = HookManager::filter('client.subscribe.servers', $servers, $user, $request);
         }
-
-        $clientInfo = $this->getClientInfo($request);
 
         $requestedTypes = $this->parseRequestedTypes($request->input('types'));
         $filterKeywords = $this->parseFilterKeywords($request->input('filter'));
@@ -147,7 +153,14 @@ class ClientController extends Controller
 
     private function getClientInfo(Request $request): array
     {
-        $flag = strtolower($request->input('flag') ?? $request->header('User-Agent', ''));
+        $requestFlag = strtolower(trim((string) $request->input('flag', '')));
+        $userAgent = strtolower((string) $request->header('User-Agent', ''));
+
+        if ($this->isTelegramSubscribeRequest($requestFlag, $userAgent)) {
+            return $this->telegramClientInfo();
+        }
+
+        $flag = $requestFlag ?: $userAgent;
 
         $clientName = null;
         $clientVersion = null;
@@ -188,6 +201,99 @@ class ClientController extends Controller
             'name' => $clientName,
             'version' => $clientVersion
         ];
+    }
+
+    private function isTelegramSubscribeRequest(string $requestFlag, string $userAgent): bool
+    {
+        return $requestFlag === 'telegram' || str_contains($userAgent, 'telegram');
+    }
+
+    private function telegramClientInfo(): array
+    {
+        return [
+            'flag' => 'telegram',
+            'name' => 'telegram',
+            'version' => null,
+        ];
+    }
+
+    private function redirectTelegramSubscribe($user)
+    {
+        $label = MTPSecretSyncJob::labelForUserId($user->id);
+        $secret = $this->resolveTelegramProxySecret($label);
+
+        return redirect()->away($this->buildTelegramProxyRedirectUrl($secret), 301);
+    }
+
+    private function resolveTelegramProxySecret(string $label): string
+    {
+        $command = $this->buildMtpSshCommand(sprintf('mtproxymax secret link %s', $label));
+        $result = Process::run($command);
+
+        if (!$result->successful()) {
+            throw new ApiException('Telegram proxy link generation failed');
+        }
+
+        $output = preg_replace('/\e\[[\d;]*[A-Za-z]/', '', trim($result->output()));
+        if (!preg_match('/secret=([^&\s]+)/', $output, $matches)) {
+            throw new ApiException('Telegram proxy secret not found');
+        }
+
+        return $matches[1];
+    }
+
+    private function buildTelegramProxyRedirectUrl(string $secret): string
+    {
+        $serverHost = (string) config('mtp.server.host');
+        $serverPort = (string) config('mtp.server.port');
+
+        if (blank($serverHost) || blank($serverPort)) {
+            throw new ApiException('MTP server is not configured');
+        }
+
+        return 'tg://proxy?' . http_build_query([
+            'server' => $serverHost,
+            'port' => $serverPort,
+            'secret' => $secret,
+        ]);
+    }
+
+    private function buildMtpSshCommand(string $remoteCommand): array
+    {
+        $host = (string) config('mtp.ssh.host');
+        $port = (string) config('mtp.ssh.port');
+        $user = (string) config('mtp.ssh.user');
+        $keyPath = $this->expandHomePath((string) config('mtp.ssh.key_path'));
+
+        return [
+            'ssh',
+            '-i',
+            $keyPath,
+            '-p',
+            (string) $port,
+            '-o',
+            'BatchMode=yes',
+            '-o',
+            'StrictHostKeyChecking=accept-new',
+            '-o',
+            'ConnectTimeout=10',
+            "{$user}@{$host}",
+            $remoteCommand,
+        ];
+    }
+
+    private function expandHomePath(string $path): string
+    {
+        if (!str_starts_with($path, '~/')) {
+            return $path;
+        }
+
+        $home = rtrim((string) ($_SERVER['HOME'] ?? getenv('HOME') ?: ''), '/');
+        if ($home === '') {
+            return $path;
+        }
+
+        return $home . substr($path, 1);
     }
 
     private function setSubscribeInfoToServers(&$servers, $user, $rejectServerCount = 0)
