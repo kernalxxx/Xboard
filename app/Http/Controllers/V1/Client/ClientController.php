@@ -217,7 +217,7 @@ class ClientController extends Controller
         $label = MTPSecretSyncJob::labelForUserId($user->id);
         $secret = $this->resolveMTPSecret($label);
 
-        return redirect()->away($this->buildMTPRedirectUrl($secret), 301);
+        return redirect()->away($this->buildMTPRedirectUrl($secret), 302);
     }
 
     private function resolveMTPSecret(string $label): string
